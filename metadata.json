@@ -1,0 +1,5 @@
+{
+  "name": "WeChat Editor",
+  "description": "专为微信公众号打造的像素风 Markdown 编辑器，内置 Gemini AI 助手。",
+  "requestFramePermissions": []
+}
