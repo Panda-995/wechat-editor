@@ -51,6 +51,16 @@ yarn start
 ```
 项目将在 `http://localhost:3000` 启动。
 
+## 🐳 Docker 部署
+
+无需配置本地环境，直接使用 Docker 镜像启动：
+
+```bash
+docker run -d -p 3000:80 --name wechat-editor ghcr.io/panda-995/wechat-editor:latest
+```
+
+启动后访问 `http://localhost:3000` 即可使用。
+
 ## ⚙️ AI 功能配置指南
 
 本编辑器利用 Google Gemini API 实现智能化功能。使用前请按以下步骤配置：
