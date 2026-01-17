@@ -146,6 +146,7 @@ export const DEFAULT_SNIPPETS: Snippet[] = [
 export const DEFAULT_CONFIG: AppConfig = {
   ai: {
     chat: {
+      provider: 'gemini',
       apiKey: '',
       baseUrl: '',
       chatModel: 'gemini-3-flash-preview',
@@ -153,6 +154,7 @@ export const DEFAULT_CONFIG: AppConfig = {
       temperature: 0.7,
     },
     image: {
+      provider: 'gemini',
       apiKey: '',
       baseUrl: '',
       chatModel: '',

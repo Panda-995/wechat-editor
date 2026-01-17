@@ -1,4 +1,5 @@
 export interface AIConfig {
+  provider: 'gemini' | 'openai';
   apiKey: string;
   baseUrl: string; // Optional custom base URL
   chatModel: string;
