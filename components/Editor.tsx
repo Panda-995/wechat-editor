@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import Editor from 'react-simple-code-editor';
 // @ts-ignore
 import Prism from 'prismjs';
@@ -16,13 +16,16 @@ interface CodeEditorProps {
   onOpenSnippetModal: () => void;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ 
+export const CodeEditor = forwardRef<HTMLDivElement, CodeEditorProps>(({ 
     value, onChange, fontSize, pastePlainText, snippets, onOpenSnippetModal 
-}) => {
+}, ref) => {
   const [toolbarPos, setToolbarPos] = useState<{top: number, left: number} | null>(null);
   const [contextMenu, setContextMenu] = useState<{x: number, y: number} | null>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
+  const localRef = useRef<HTMLDivElement>(null);
   const [syntaxErrors, setSyntaxErrors] = useState<{line: number, msg: string}[]>([]);
+
+  // Expose localRef to parent via forwardRef
+  useImperativeHandle(ref, () => localRef.current!);
 
   // Close context menu on click anywhere
   useEffect(() => {
@@ -71,7 +74,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   // Calculate coordinates for toolbar
   const getCaretCoordinates = () => {
-      const textarea = editorRef.current?.querySelector('textarea');
+      const textarea = localRef.current?.querySelector('textarea');
       if (!textarea) return null;
 
       const { selectionStart, selectionEnd } = textarea;
@@ -116,7 +119,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   const handleSelect = () => {
       setTimeout(() => {
-          const textarea = editorRef.current?.querySelector('textarea');
+          const textarea = localRef.current?.querySelector('textarea');
           if (!textarea || textarea.selectionStart === textarea.selectionEnd) {
               setToolbarPos(null);
               return;
@@ -133,7 +136,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   const applyFormat = (type: 'bold' | 'italic' | 'strike' | 'code' | 'quote') => {
-      const textarea = editorRef.current?.querySelector('textarea');
+      const textarea = localRef.current?.querySelector('textarea');
       if (!textarea) return;
 
       const start = textarea.selectionStart;
@@ -177,7 +180,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   const insertSnippet = (snippetContent: string) => {
-      const textarea = editorRef.current?.querySelector('textarea');
+      const textarea = localRef.current?.querySelector('textarea');
       if (textarea) {
           textarea.focus();
           document.execCommand('insertText', false, snippetContent);
@@ -188,7 +191,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   return (
     <div 
         className="h-full w-full bg-white overflow-y-auto relative font-mono group" 
-        ref={editorRef}
+        ref={localRef}
         onMouseUp={handleSelect}
         onKeyUp={(e) => {
             if (e.key === 'Shift' || e.key.startsWith('Arrow')) handleSelect();
@@ -277,4 +280,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       />
     </div>
   );
-};
+});
+
+CodeEditor.displayName = 'CodeEditor';

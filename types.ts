@@ -1,3 +1,4 @@
+
 export interface AIConfig {
   provider: 'gemini' | 'openai';
   apiKey: string;
@@ -53,8 +54,16 @@ export interface ArticleTemplate {
   isCustom: boolean;
 }
 
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  lastModified: number;
+}
+
 export interface UserData {
-  content: string; // Current markdown
+  content: string; // Deprecated, keep for migration
+  articles: Article[]; // New: List of articles
   savedDrafts: { id: string; date: string; content: string }[];
   customThemes: Theme[];
   snippets: Snippet[]; // New: Saved snippets

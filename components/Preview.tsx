@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Smartphone, Tablet, Monitor } from 'lucide-react';
@@ -8,8 +8,11 @@ interface PreviewProps {
   css: string;
 }
 
-export const Preview: React.FC<PreviewProps> = ({ content, css }) => {
+export const Preview = forwardRef<HTMLDivElement, PreviewProps>(({ content, css }, ref) => {
   const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => scrollRef.current!);
 
   return (
     <div className="h-full w-full flex flex-col bg-gray-50 border-l-2 border-gray-900">
@@ -44,7 +47,10 @@ export const Preview: React.FC<PreviewProps> = ({ content, css }) => {
       </div>
 
       {/* Scrollable Canvas */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-100/50 relative">
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-100/50 relative"
+      >
          <style>{css}</style>
          
          <div className={`min-h-full w-full flex ${device !== 'desktop' ? 'justify-center py-8' : ''}`}>
@@ -61,8 +67,41 @@ export const Preview: React.FC<PreviewProps> = ({ content, css }) => {
                      <div className="absolute -top-[8px] left-1/2 -translate-x-1/2 w-24 h-[8px] bg-gray-900 rounded-b-sm z-20"></div>
                  )}
 
-                 <div id="preview-root" className={`${device !== 'desktop' ? 'h-full' : ''}`}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                 {/* Key Fix: Change ID to 'nice' to match App.tsx logic */}
+                 <div id="nice" className={`${device !== 'desktop' ? 'h-full' : ''}`}>
+                    <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                            // Custom Heading Renderers to support rich WeChat styles (prefix, content, suffix)
+                            h1: ({node, ...props}) => (
+                                <h1 {...props}>
+                                    <span className="prefix"></span>
+                                    <span className="content">{props.children}</span>
+                                    <span className="suffix"></span>
+                                </h1>
+                            ),
+                            h2: ({node, ...props}) => (
+                                <h2 {...props}>
+                                    <span className="prefix"></span>
+                                    <span className="content">{props.children}</span>
+                                    <span className="suffix"></span>
+                                </h2>
+                            ),
+                            h3: ({node, ...props}) => (
+                                <h3 {...props}>
+                                    <span className="prefix"></span>
+                                    <span className="content">{props.children}</span>
+                                    <span className="suffix"></span>
+                                </h3>
+                            ),
+                            // List items wrapped in section for better styling control
+                            li: ({node, ...props}) => (
+                                <li>
+                                    <section>{props.children}</section>
+                                </li>
+                            ),
+                        }}
+                    >
                       {content}
                     </ReactMarkdown>
                  </div>
@@ -71,4 +110,6 @@ export const Preview: React.FC<PreviewProps> = ({ content, css }) => {
       </div>
     </div>
   );
-};
+});
+
+Preview.displayName = 'Preview';

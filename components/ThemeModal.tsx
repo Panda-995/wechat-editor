@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PixelModal, PixelButton, PixelInput } from './PixelComponents';
 import { Theme, AppConfig } from '../types';
 import { generateThemeCSS } from '../services/geminiService';
-import { Code, Check, Sparkles, X, Star, GripVertical } from 'lucide-react';
+import { Code, Check, Sparkles, X, Star, GripVertical, Save, Copy } from 'lucide-react';
 
 interface ThemeModalProps {
   isOpen: boolean;
@@ -11,23 +11,27 @@ interface ThemeModalProps {
   activeThemeId: string;
   onSelectTheme: (id: string) => void;
   onAddTheme: (theme: Theme) => void;
+  onUpdateTheme: (theme: Theme) => void;
   config: AppConfig;
 }
 
 export const ThemeModal: React.FC<ThemeModalProps> = ({
-  isOpen, onClose, themes, activeThemeId, onSelectTheme, onAddTheme, config
+  isOpen, onClose, themes, activeThemeId, onSelectTheme, onAddTheme, onUpdateTheme, config
 }) => {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [viewCssId, setViewCssId] = useState<string | null>(null);
+  const [editingCss, setEditingCss] = useState('');
   const [isAiMode, setIsAiMode] = useState(false);
   
-  // Local state for sorting/fav manipulation before saving to parent
-  // In a real app we might want to propagate changes up, but here we modify the passed reference or local state
-  // For simplicity, we assume 'themes' from props is stateful in parent, but we can't easily reorder props.
-  // We will emit an update event if we had one.
-  // Limitation: We will implement visual sorting based on favorites here.
-  
+  // Reset editing CSS when switching themes
+  useEffect(() => {
+    if (viewCssId) {
+        const theme = themes.find(t => t.id === viewCssId);
+        if (theme) setEditingCss(theme.css);
+    }
+  }, [viewCssId, themes]);
+
   const sortedThemes = [...themes].sort((a, b) => {
       // Favorites first
       if (a.isFavorite && !b.isFavorite) return -1;
@@ -59,31 +63,38 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
     }
   };
 
+  const handleSaveCss = (originalTheme: Theme) => {
+      if (originalTheme.isCustom) {
+          // Update existing custom theme
+          onUpdateTheme({
+              ...originalTheme,
+              css: editingCss
+          });
+          alert('样式已更新');
+      } else {
+          // Clone built-in theme
+          const newTheme: Theme = {
+              ...originalTheme,
+              id: `custom_clone_${Date.now()}`,
+              name: `${originalTheme.name} (Copy)`,
+              css: editingCss,
+              isCustom: true,
+              isFavorite: false
+          };
+          onAddTheme(newTheme);
+          setViewCssId(newTheme.id); // Switch view to new theme
+          alert('内置主题已另存为自定义主题');
+      }
+  };
+
   const toggleFavorite = (theme: Theme) => {
-      // Since themes are props, we need a way to update them.
-      // We will create a new theme object and call onAddTheme (which pushes).
-      // But we want to UPDATE. The current App implementation only appends 'customThemes'.
-      // For built-ins we can't easily persist changes without changing App.tsx logic significantly.
-      // HACK: We will try to update custom themes if it is custom.
-      // For this specific request "Pin Functionality", we'd usually need an onUpdateTheme prop.
-      // I will implement visual feedback locally for now or rely on onAddTheme to "update" if logic allows?
-      // Let's assume onAddTheme appends.
-      // To properly support this without changing App.tsx too much:
-      // We will just alert that this requires persistence changes, OR
-      // We assume the user wants to clone and star it.
-      
-      // Better: We really should update App.tsx to handle updates. 
-      // But instruction says "don't change other functions". 
-      // I'll cheat slightly: I will modify the theme object directly since objects are references, 
-      // and force a re-render in parent if possible.
-      
-      theme.isFavorite = !theme.isFavorite;
-      // Force update UI locally
-      setPrompt(prompt + ' '); 
-      setPrompt(prompt);
+      onUpdateTheme({
+          ...theme,
+          isFavorite: !theme.isFavorite
+      });
   };
   
-  // Drag and Drop State
+  // Drag and Drop State (Placeholder logic preserved from previous implementation)
   const [draggedItem, setDraggedItem] = useState<Theme | null>(null);
 
   const handleDragStart = (e: React.DragEvent, theme: Theme) => {
@@ -93,19 +104,15 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
 
   const handleDragOver = (e: React.DragEvent, targetTheme: Theme) => {
       e.preventDefault();
-      if (!draggedItem || draggedItem.id === targetTheme.id) return;
-      // Visual reordering logic would go here
   };
 
   const handleDrop = (e: React.DragEvent, targetTheme: Theme) => {
       e.preventDefault();
-      // Logic to swap themes would go here. 
-      // Due to prop constraints, we will just log for now or implement if 'themes' was a state setter.
       setDraggedItem(null);
   };
 
-  const copyCSS = (css: string) => {
-      navigator.clipboard.writeText(css);
+  const copyCSS = () => {
+      navigator.clipboard.writeText(editingCss);
       alert('CSS 代码已复制');
   };
 
@@ -187,26 +194,40 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
                     </PixelButton>
                     <button 
                         onClick={() => setViewCssId(viewCssId === theme.id ? null : theme.id)}
-                        className="p-2 border-2 border-gray-800 bg-gray-100 hover:bg-gray-200"
-                        title="查看 CSS"
+                        className={`p-2 border-2 ${viewCssId === theme.id ? 'bg-gray-800 text-white border-black' : 'border-gray-800 bg-gray-100 hover:bg-gray-200'}`}
+                        title="编辑 CSS"
                     >
                         <Code size={14}/>
                     </button>
                 </div>
 
                 {viewCssId === theme.id && (
-                    <div className="mt-3 relative border-t-2 border-gray-200 pt-2">
+                    <div className="mt-3 relative border-t-2 border-gray-200 pt-2 animate-in fade-in slide-in-from-top-1">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] font-bold text-gray-500">
+                                {theme.isCustom ? '编辑 CSS' : '预览 (保存将自动复制)'}
+                            </span>
+                        </div>
                         <textarea 
-                            readOnly 
-                            value={theme.css} 
-                            className="w-full h-24 text-[10px] font-mono border border-gray-300 p-1 bg-gray-50 resize-none leading-tight outline-none"
+                            value={editingCss} 
+                            onChange={(e) => setEditingCss(e.target.value)}
+                            className="w-full h-32 text-[10px] font-mono border-2 border-gray-300 p-2 bg-gray-50 resize-none leading-tight outline-none focus:border-blue-500 focus:bg-white"
+                            spellCheck={false}
                         />
-                        <button 
-                            onClick={() => copyCSS(theme.css)}
-                            className="absolute bottom-2 right-2 text-[10px] bg-black text-white px-2 py-1 hover:bg-gray-800 font-bold"
-                        >
-                            复制
-                        </button>
+                        <div className="flex gap-2 mt-2 justify-end">
+                            <button 
+                                onClick={copyCSS}
+                                className="text-[10px] flex items-center gap-1 bg-gray-100 border border-gray-300 px-2 py-1 hover:bg-gray-200"
+                            >
+                                <Copy size={10}/> 复制
+                            </button>
+                            <button 
+                                onClick={() => handleSaveCss(theme)}
+                                className="text-[10px] flex items-center gap-1 bg-blue-600 text-white px-2 py-1 hover:bg-blue-700 font-bold"
+                            >
+                                <Save size={10}/> 保存
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
