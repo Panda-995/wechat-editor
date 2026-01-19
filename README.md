@@ -56,7 +56,7 @@ yarn start
 无需配置本地环境，直接使用 Docker 镜像启动：
 
 ```bash
-docker run -d -p 3000:80 --name wechat-editor ghcr.io/panda-995/wechat-editor:latest
+docker run -d -p 3000:80 --name wechat-editor ghcr.io/panda-995/wechat-editor:v1.1
 ```
 
 启动后访问 `http://localhost:3000` 即可使用。
